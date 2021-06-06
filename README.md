@@ -67,6 +67,7 @@
 * Cheng, Heng-Tze, et al. "Wide & deep learning for recommender systems." Proceedings of the 1st workshop on deep learning for recommender systems. 2016.
 
    
-
-
+## **8. ranking**
+* [A Multitask Ranking System](https://daiwk.github.io/assets/youtube-multitask.pdf)
+* [XCrossNet](https://github.com/bigdata-ustc/XCrossNet)
 
