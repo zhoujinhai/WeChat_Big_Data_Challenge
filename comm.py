@@ -34,6 +34,19 @@ STAGE_END_DAY = {"online_train": 14, "offline_train": 12, "evaluate": 13, "submi
 # 各个行为构造训练数据的天数
 ACTION_DAY_NUM = {"read_comment": 5, "like": 5, "click_avatar": 5, "forward": 5, "comment": 5, "follow": 5, "favorite": 5}
 
+# TODO add 2021/05/30
+# print("start read feed embedding file: ")
+# feed_embed_path = os.path.join(ROOT_PATH, "wechat_algo_data1", "feed_embeddings.csv")
+# feed_embed_feature = pd.read_csv(feed_embed_path)
+# embedding = feed_embed_feature["feed_embedding"].str.split(' ', expand=True)
+# n_cols = embedding.shape[1] - 1
+# for i in range(n_cols):
+#     col_name = "feed_emb_" + str(i + 1)
+#     feed_embed_feature[col_name] = pd.to_numeric(embedding[i])
+# del feed_embed_feature['feed_embedding']
+# feed_embed_feature = feed_embed_feature.set_index(["feedid"])
+# print("end read feed embedding file: ")
+
 
 def create_dir():
     """
@@ -44,7 +57,7 @@ def create_dir():
         print('Create dir: %s'%ROOT_PATH)
         os.mkdir(ROOT_PATH)
     # data目录下需要创建的子目录
-    need_dirs = ["offline_train", "online_train", "evaluate", "submit",
+    need_dirs = ["offline_train", "online_train", "evaluate", "submit", "data_sets",
                  "feature", "model", "model/online_train", "model/offline_train"]
     for need_dir in need_dirs:
         need_dir = os.path.join(ROOT_PATH, need_dir)
@@ -152,6 +165,7 @@ def generate_sample(stage="offline_train"):
             print('Save to: %s'%file_name)
             df_all[col].to_csv(file_name, index=False)
             df_arr.append(df_all[col])
+
     return df_arr
 
 
@@ -176,7 +190,7 @@ def concat_sample(sample_arr, stage="offline_train"):
 
     for index, sample in enumerate(sample_arr):
         features = ["userid", "feedid", "device", "authorid", "bgm_song_id", "bgm_singer_id",
-                    "videoplayseconds"]
+                    "videoplayseconds", "description", "manual_keyword_list", "manual_tag_list"]
         if stage == "evaluate":
             action = "all"
             features += ACTION_LIST
@@ -189,14 +203,18 @@ def concat_sample(sample_arr, stage="offline_train"):
         sample = sample.join(feed_info, on="feedid", how="left", rsuffix="_feed")
         sample = sample.join(feed_date_feature, on=["feedid", "date_"], how="left", rsuffix="_feed")
         sample = sample.join(user_date_feature, on=["userid", "date_"], how="left", rsuffix="_user")
+        # sample = sample.join(feed_embed_feature, on="feedid", how="left", rsuffix="_feed")
         feed_feature_col = [b+"sum" for b in FEA_COLUMN_LIST]
         user_feature_col = [b+"sum_user" for b in FEA_COLUMN_LIST]
+        # feed_embed_col = ["feed_emb_" + str(i + 1) for i in range(n_cols)]
         sample[feed_feature_col] = sample[feed_feature_col].fillna(0.0)
         sample[user_feature_col] = sample[user_feature_col].fillna(0.0)
+        # sample[feed_embed_col] = sample[feed_embed_col].fillna(0.0)
         sample[feed_feature_col] = np.log(sample[feed_feature_col] + 1.0)
         sample[user_feature_col] = np.log(sample[user_feature_col] + 1.0)
         features += feed_feature_col
         features += user_feature_col
+        # features += feed_embed_col
 
         sample[["authorid", "bgm_song_id", "bgm_singer_id"]] += 1  # 0 用于填未知
         sample[["authorid", "bgm_song_id", "bgm_singer_id", "videoplayseconds"]] = \
@@ -232,4 +250,16 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
+
+    # feed_embed_path = os.path.join(ROOT_PATH, "wechat_algo_data1", "feed_embeddings.csv")
+    # feed_embed_feature = pd.read_csv(feed_embed_path)
+    # feed_embed_feature = feed_embed_feature.set_index(["feedid"])
+    # print(feed_embed_feature["feed_embedding"])
+    #
+    # embedding = feed_embed_feature["feed_embedding"].str.split(' ', expand=True)
+    # for i in range(embedding.shape[1] - 1):
+    #     col_name = "feed_emb_" + str(i+1)
+    #     feed_embed_feature[col_name] = pd.to_numeric(embedding[i])
+    # del feed_embed_feature['feed_embedding']
+    # print(feed_embed_feature.describe())
+    # print(feed_embed_feature["feed_emb_1"])

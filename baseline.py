@@ -23,7 +23,6 @@ flags.DEFINE_float('embed_l2', None, 'embedding l2 reg')
 SEED = 2021
 
 
-
 class WideAndDeep(object):
 
     def __init__(self, linear_feature_columns, dnn_feature_columns, stage, action):
@@ -91,9 +90,12 @@ class WideAndDeep(object):
         ds = ds.batch(batch_size)
         if stage in ["online_train", "offline_train"]:
             ds = ds.repeat(num_epochs)
+        print("ds: ", ds)
         return ds
 
     def input_fn_train(self, df, stage, action, num_epochs):
+        print("df.shape: ", df.shape)
+
         return self.df_to_dataset(df, stage, action, shuffle=True, batch_size=FLAGS.batch_size,
                                   num_epochs=num_epochs)
 
@@ -136,7 +138,6 @@ class WideAndDeep(object):
         uauc = uAUC(labels, logits, userid_list)
         return df[["userid", "feedid"]], logits, uauc
 
-    
     def predict(self):
         '''
         预测单个行为的发生概率
@@ -155,7 +156,6 @@ class WideAndDeep(object):
         ts = (time.time()-t)*1000.0/len(df)*2000.0
         return df[["userid", "feedid"]], logits, ts
 
-    
 
 def del_file(path):
     '''
@@ -204,6 +204,11 @@ def get_feature_columns():
         linear_feature_columns.append(feed_b)
         user_b = fc.numeric_column(b+"sum_user", default_value=0.0)
         linear_feature_columns.append(user_b)
+    # TODO add 2021/05/13
+    for i in range(1, 5):
+        feed_emb = fc.numeric_column("feed_emb_" + str(i), default_value=0.0)
+        linear_feature_columns.append(feed_emb)
+    print("&&&&****", len(dnn_feature_columns), len(linear_feature_columns))
     return dnn_feature_columns, linear_feature_columns
 
 
@@ -247,7 +252,6 @@ def main(argv):
         weight_auc = compute_weighted_score(eval_dict, weight_dict)
         print("Weighted uAUC: ", weight_auc)
 
-
     if stage in ["evaluate", "submit"]:
         # 保存所有行为的预测结果，生成submit文件
         actions = pd.DataFrame.from_dict(predict_dict)
@@ -270,4 +274,3 @@ def main(argv):
 
 if __name__ == "__main__":
     tf.app.run(main)
-    
