@@ -74,12 +74,12 @@ if __name__ == "__main__":
 
     print("start read feed embedding file: ")
     feed_embed_feature = pd.read_csv(FEED_EMBEDDINGS_FILE)
-    # embedding = feed_embed_feature["feed_embedding"].str.split(' ', expand=False)
-    # n_cols = embedding.shape[1] - 1
-    # for i in range(n_cols):
-    #     col_name = "feed_emb_" + str(i + 1)
-    #     feed_embed_feature[col_name] = pd.to_numeric(embedding[i])
-    # del feed_embed_feature['feed_embedding']
+    embedding = feed_embed_feature["feed_embedding"].str.split(' ', expand=True)
+    n_cols = embedding.shape[1] - 1
+    for i in range(n_cols):
+        col_name = "feed_emb_" + str(i + 1)
+        feed_embed_feature[col_name] = pd.to_numeric(embedding[i])
+    del feed_embed_feature['feed_embedding']
     feed_embed_feature = feed_embed_feature.set_index(["feedid"])
     print(feed_embed_feature.shape)
     print(feed_embed_feature.head())

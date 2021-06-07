@@ -185,51 +185,15 @@ def process_data(stage):
     print("read %s.csv ..." % stage)
     df = pd.read_csv(os.path.join(DATA_SETS_PATH, stage + ".csv"))
     print(df.columns, df.shape)
-    if stage == "online_train" or stage == "offline_train":
-        df = df.loc[:df.shape[0]*0.6]   # 内存不够
-    # deal description keywords tags
-    # pd.set_option('display.width', None)
-    # print(df.head())
-    # print(df.columns)
+    # if stage == "online_train" or stage == "offline_train" or stage == "evaluate":
+    #     df = df.loc[:df.shape[0]*0.6]   # 内存不够
+    
+    # TODO  description / keywords / tags
 
-    # df['video_emb'] = df['description'] + df['manual_keyword_list'] + df["manual_tag_list"]
-    #
-    # tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-    # model = TFBertModel.from_pretrained('bert-base-cased')
-    # max_length = 2  # change it to your computer capacity
-    # batch_encoding = tokenizer.batch_encode_plus(df['video_emb'].tolist(), max_length=max_length, pad_to_max_length=True)
-    #
-    # outputs = model(tf.convert_to_tensor(batch_encoding['input_ids']))  # shape: (batch,sequence length, hidden state)
-    # embeddings_video = tf.reduce_mean(outputs[0], 1)
-    # df['video_emb'] = embeddings_video.numpy().tolist()
-    # print("video emb shape: ", df["video_emb"].shape)
-
-    # df['feed_embedding'] = df['feed_embedding'].tolist()
-    # pd.set_option('display.width', None)
-    # print("feed embedding shape: ", df["feed_embedding"].shape)
-    # print(df.head())
-    # print(df.columns)
-    # TODO 合并sum为一个 add description / keywords / tags
-    # feed_sum_feature = []
-    # user_sum_feature = []
-    # for b in FEA_COLUMN_LIST:
-    #     feed_b = df[b+"sum"]
-    #     feed_sum_feature.append(feed_b)
-    #     user_b = df[b+"sum_user"]
-    #     user_sum_feature.append(user_b)
-    # df["feed_sum"] = feed_sum_feature
-    # df["user_sum"] = user_sum_feature
-    # pd.set_option('display.width', None)
-    # print(df.head())
-    # print(df.columns)
-    # embedding = df["feed_embedding"].str.split(' ', expand=False)
-    # del df["feed_embedding"]
-    # print(df.columns)
-    # df["feed_embedding"] = embedding
     df = df.drop(columns=['bgm_song_id', 'bgm_singer_id', 'videoplayseconds', 'description', 'manual_keyword_list', 'manual_tag_list'])
-    df['feed_embedding'] = df['feed_embedding'].str.split(" ")
+    # df['feed_embedding'] = df['feed_embedding'].str.split(" ")
 
-    pd.set_option('display.width', None)
+    # pd.set_option('display.width', None)
     print(df.head())
     print(df.columns)
     return df
@@ -243,7 +207,10 @@ def train_ranking_model():   # def train_ranking_model(df):
     val_test_data = process_data("evaluate")
     val_data, test_data = train_test_split(val_test_data, test_size=0.5)
     train_data_label = [train_data[col_name].values for col_name in ['read_comment', 'like', 'click_avatar', 'forward']]
-    train_data_feature = [np.asarray(np.squeeze(train_data[['feed_embedding']].values.tolist())).astype(np.float32)]
+    train_data_feature = []
+    for i in range(512):
+        feed_emb = np.asarray(np.squeeze(train_data[['feed_emb_'+str(i + 1)]].values.tolist())).astype(np.float32)
+        train_data_feature.append(feed_emb)
     for b in FEA_COLUMN_LIST:
         feed_b = np.asarray(np.squeeze(train_data[[b+"sum"]].values.tolist())).astype(np.float32)
         train_data_feature.append(feed_b)
@@ -251,7 +218,10 @@ def train_ranking_model():   # def train_ranking_model(df):
         train_data_feature.append(user_b)
 
     val_data_label = [val_data[col_name].values for col_name in ['read_comment', 'like', 'click_avatar', 'forward']]
-    val_data_feature = [np.asarray(np.squeeze(val_data[['feed_embedding']].values.tolist())).astype(np.float32)]
+    val_data_feature = []
+    for i in range(512):
+        feed_emb = np.asarray(np.squeeze(val_data[['feed_emb_' + str(i + 1)]].values.tolist())).astype(np.float32)
+        val_data_feature.append(feed_emb)
     for b in FEA_COLUMN_LIST:
         feed_b = np.asarray(np.squeeze(val_data[[b + "sum"]].values.tolist())).astype(np.float32)
         val_data_feature.append(feed_b)
@@ -259,7 +229,10 @@ def train_ranking_model():   # def train_ranking_model(df):
         val_data_feature.append(user_b)
 
     test_data_label = [test_data[col_name].values for col_name in ['read_comment', 'like', 'click_avatar', 'forward']]
-    test_data_feature = [np.asarray(np.squeeze(test_data[['feed_embedding']].values.tolist())).astype(np.float32)]
+    test_data_feature = []
+    for i in range(512):
+        feed_emb = np.asarray(np.squeeze(test_data[['feed_emb_' + str(i + 1)]].values.tolist())).astype(np.float32)
+        test_data_feature.append(feed_emb)
     for b in FEA_COLUMN_LIST:
         feed_b = np.asarray(np.squeeze(test_data[[b + "sum"]].values.tolist())).astype(np.float32)
         test_data_feature.append(feed_b)
@@ -299,8 +272,9 @@ def train_ranking_model():   # def train_ranking_model(df):
 
     # Set up the input layer
     input_feature = []
-    input_feed_embedding = Input(shape=(512,))
-    input_feature.append(input_feed_embedding)
+    for i in range(512):
+        input_feed_embedding = Input(shape=(1,))
+        input_feature.append(input_feed_embedding)
     for b in FEA_COLUMN_LIST:
         input_feed_sum = Input(shape=(1,))
         input_user_sum = Input(shape=(1,))
@@ -444,7 +418,10 @@ def main():
     print("testing data...")
     test_data = process_data("submit").head()
 
-    test_data_feature = [np.asarray(np.squeeze(test_data[['feed_embedding']].values.tolist())).astype(np.float32)]
+    test_data_feature = []
+    for i in range(1, 513):
+        feed_emb = np.asarray(np.squeeze(test_data[['feed_emb_' + str(i)]].values.tolist())).astype(np.float32)
+        test_data_feature.append(feed_emb)
     for b in FEA_COLUMN_LIST:
         feed_b = np.asarray(np.squeeze(test_data[[b + "sum"]].values.tolist())).astype(np.float32)
         test_data_feature.append(feed_b)
